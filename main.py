@@ -77,14 +77,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-
 def get_current_data():
     ts = astro_data['ts']
     t = ts.now()
     observer = astro_data['observer']
     earth = astro_data['eph']['earth']
     
-    # Calculate Track Times
+    # Calculate Track Times (e.g., next 24 hours)
     track_hours = CONFIG.get('plot', {}).get('track_hours', 24)
     times = ts.utc(t.utc_datetime().year, t.utc_datetime().month, t.utc_datetime().day, 
                    t.utc_datetime().hour, np.arange(0, track_hours*60, 10)) 
@@ -107,24 +106,32 @@ def get_current_data():
     lst_str = f"{lst_h:02d}h {lst_m:02d}m {lst_s:02d}s"
 
     for name, obj in astro_data['objects'].items():
-        # Current
+        # 1. Get CURRENT Position
         apparent = topocentric_now.observe(obj).apparent()
         alt, az, _ = apparent.altaz()
         ra, dec, _ = apparent.radec()
         
-        # Track
-        apparent_track = topocentric_track.observe(obj).apparent()
-        alt_track, az_track, _ = apparent_track.altaz()
-        
-        mask = alt_track.degrees > 0
-        if np.any(mask):
-            r_track = 90 - alt_track.degrees[mask]
-            theta_track = np.deg2rad(az_track.degrees[mask])
+        # --- MODIFIED SECTION START ---
+        # Only calculate/render the path if the source is CURRENTLY above the horizon
+        if alt.degrees > 0:
             
-            if name == 'Sun': p_color = '#FFD700'
-            elif name == 'Moon': p_color = '#C0C0C0'
-            else: p_color = '#008B8B'
-            paths_data.append((theta_track, r_track, p_color))
+            # Calculate future positions
+            apparent_track = topocentric_track.observe(obj).apparent()
+            alt_track, az_track, _ = apparent_track.altaz()
+            
+            # Filter: Even if the source is up now, parts of its future path might be below horizon (setting).
+            # We mask those out so we don't draw lines through the "ground".
+            mask = alt_track.degrees > 0
+            if np.any(mask):
+                r_track = 90 - alt_track.degrees[mask]
+                theta_track = np.deg2rad(az_track.degrees[mask])
+                
+                if name == 'Sun': p_color = '#FFD700'
+                elif name == 'Moon': p_color = '#C0C0C0'
+                else: p_color = '#008B8B'
+                
+                paths_data.append((theta_track, r_track, p_color))
+        # --- MODIFIED SECTION END ---
 
         results.append({
             "name": name,
@@ -134,6 +141,7 @@ def get_current_data():
             "dec": str(dec)
         })
 
+        # Add current position dot to plot (only if above horizon, with buffer)
         if alt.degrees > -5:
             r = 90 - alt.degrees
             theta = np.deg2rad(az.degrees)

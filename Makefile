@@ -1,6 +1,6 @@
 .PHONY: help venv install clean run dev service service-macos uninstall-service uninstall-service-macos
 
-VENV := venv
+VENV := .venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 UVICORN := $(VENV)/bin/uvicorn
