@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ location }} Sky Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Global Reset & Font */
+        * { box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Source Code Pro', monospace; 
+            background: #121212; 
+            color: #e0e0e0; 
+            margin: 0; 
+            padding: 20px;
+            display: flex;
+            justify-content: center; /* Centers the main wrapper */
+        }
+
+        /* MAIN WRAPPER 
+           - Controls the width of ALL lines (Header, Plot, Table) 
+           - Responsive: 100% on mobile, max 800px on desktop
+        */
+        .main-wrapper {
+            width: 100%;
+            max-width: 800px; /* Adjust this to make the column wider/narrower */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* HEADERS */
+        h1 { 
+            color: #86fcc1; 
+            margin: 0; 
+            font-weight: 700; 
+            letter-spacing: 1px; 
+            font-size: 2.2em;
+            text-align: center;
+        }
+
+        .sub-header { 
+            color: #cdcccc; 
+            font-size: 1.0em; 
+            text-align: center;
+            line-height: 1.5; /* Better spacing for mobile wrapping */
+        }
+
+        /* STATUS BAR (Time) */
+        .status-bar { 
+            width: 100%; /* Full width of wrapper */
+            background: #252525;
+            color: #cf6679; 
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            text-align: center;
+            font-size: 1.0em;
+            white-space: pre-wrap;
+        }
+        
+        /* PANELS (Plot & Table containers) */
+        .panel { 
+            width: 100%; /* Full width of wrapper */
+            background: #1e1e1e; 
+            padding: 20px; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5); 
+            border: 1px solid #333;
+            text-align: center;
+            overflow: hidden; /* Keeps content inside rounded corners */
+        }
+
+        /* PLOT IMAGE */
+        #sky-plot { 
+            width: 100%;
+            max-width: 500px; /* Prevents image from getting massive on desktop */
+            height: auto;     /* Maintains aspect ratio */
+            border-radius: 50%; 
+            box-shadow: 0 0 30px rgba(0,0,0,0.8); 
+            background: black;
+        }
+
+        /* TABLE */
+        .table-container {
+            width: 100%;
+            overflow-x: auto; /* Adds scrollbar on small mobile if needed */
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 0.9em; 
+            min-width: 400px; /* Prevents table squishing too much */
+        }
+        
+        th { 
+            text-align: center; 
+            padding: 12px 8px; 
+            border-bottom: 2px solid #333; 
+            color: #03dac6; 
+            font-weight: 600; 
+            text-transform: uppercase; 
+        }
+        
+        td { 
+            text-align: center; 
+            padding: 10px 8px; 
+            border-bottom: 1px solid #2a2a2a; 
+        }
+        
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #2a2a2a; }
+
+        /* Labels */
+        .label { color: #ffffff; font-weight: bold; margin-right: 5px; }
+        .sep { color: #444; margin: 0 10px; }
+        
+        /* Mobile Tweaks */
+        @media (max-width: 600px) {
+            h1 { font-size: 1.8em; }
+            .status-bar { font-size: 0.85em; padding: 10px; }
+            .panel { padding: 15px; }
+            td, th { padding: 8px 4px; font-size: 0.85em; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        
+        <div>
+            <h1>{{ location }}</h1>
+            <div class="sub-header">
+                LAT: {{ lat }}&deg; &nbsp;|&nbsp; LON: {{ lon }}&deg; &nbsp;|&nbsp; ELEV: {{ elev }}m
+            </div>
+        </div>
+        
+        <div class="status-bar" id="time-display">Connecting to observatory...</div>
+
+        <div class="panel">
+            <img id="sky-plot" src="/plot" alt="Sky Plot">
+        </div>
+
+        <div class="panel">
+            <h3 style="margin-top: 0; margin-bottom: 15px; color: #03dac6; border-bottom: 1px solid #333; padding-bottom: 10px;">
+                Brightest Sources
+            </h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Source</th>
+                            <th>Alt (&deg;)</th>
+                            <th>Az (&deg;)</th>
+                            <th>RA (hms)</th>
+                            <th>Dec (dms)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        async function updateDashboard() {
+            try {
+                const response = await fetch('/data');
+                const data = await response.json();
+
+                // Update Time
+                const t = data.time;
+                document.getElementById('time-display').innerHTML = 
+                    `<span class="label">UTC:</span>${t.utc} <span class="sep">|</span> ` +
+                    `<span class="label">LST:</span>${t.lst} <span class="sep">|</span> ` +
+                    `<span class="label">LOC:</span>${t.local}`;
+
+                // Update Table
+                const tbody = document.getElementById('data-table');
+                let html = '';
+                
+                data.sources.forEach(s => {
+                    let color = 'white';
+                    if (s.name === 'Sun') color = '#FFD700';
+                    else if (s.name === 'Moon') color = '#C0C0C0';
+                    
+                    let opacity = (s.alt < 0) ? '0.4' : '1.0';
+                    
+                    html += `<tr style="color:${color}; opacity:${opacity}">
+                        <td style="font-weight:bold">${s.name}</td>
+                        <td>${s.alt.toFixed(2)}</td>
+                        <td>${s.az.toFixed(2)}</td>
+                        <td>${s.ra}</td>
+                        <td>${s.dec}</td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+
+                // Update Plot
+                document.getElementById('sky-plot').src = "/plot?t=" + new Date().getTime();
+
+            } catch (e) {
+                console.error("Connection lost:", e);
+            }
+        }
+
+        setInterval(updateDashboard, {{ refresh_rate }});
+        updateDashboard();
+    </script>
+</body>
+</html>
