@@ -19,3 +19,7 @@ com.casm.sky.plist
 
 # macOS
 .DS_Store
+
+# Large data files (downloaded by the application)
+*.bsp
+*.dat
