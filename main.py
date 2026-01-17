@@ -5,8 +5,9 @@ import numpy as np
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import Response, JSONResponse
+from fastapi.responses import Response, JSONResponse, FileResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 
 from skyfield.api import load, Star, wgs84
 from skyfield.data import hipparcos
@@ -76,6 +77,9 @@ async def lifespan(app: FastAPI):
     print("Shutting down.")
 
 app = FastAPI(lifespan=lifespan)
+
+# Serve local static assets (CSS/JS/images/data) from ./static at /static
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 def get_current_data():
     ts = astro_data['ts']
@@ -182,6 +186,12 @@ async def get_home(request: Request):
         "elev": CONFIG['location']['elevation'],
         "refresh_rate": CONFIG.get('plot', {}).get('refresh_rate', 1000)
     })
+
+
+@app.get("/rfi")
+async def get_rfi():
+    """Serve the standalone skyrfi.html at /rfi"""
+    return FileResponse("skyrfi.html", media_type="text/html")
 
 @app.get("/data")
 async def get_data():

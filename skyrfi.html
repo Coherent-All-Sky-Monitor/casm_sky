@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CASM Potential Sky RFI  Monitor (Compass & Distance)</title>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.min.js"></script>
+    <link rel="stylesheet" href="/static/css/template.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <div>
+                <h2>CASM Potential Sky RFI Monitor</h2>
+                <div class="controls">Sources: Airplanes.live (ADSB fetched 1s), CelesTrak (TLEs fetched 3h), HeyWhatsThat to get horizon profile</div>
+            </div>
+            <div class="stats">
+                <div class="stat-item">Satellites: <span id="count-sat">0</span> <span id="blocked-sat" class="blocked"></span></div>
+                <div class="stat-item">Planes: <span id="count-plane">0</span> <span id="blocked-plane" class="blocked"></span></div>
+                <div class="stat-item">UTC: <span id="clock-utc">--:--:--</span></div>
+                <div class="stat-item">Obs Local: <span id="clock-obs">--:--:--</span></div>
+                <div class="stat-item">Your Time: <span id="clock-user">--:--:--</span></div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="box"><div id="polar"></div></div>
+            <div class="box"><div id="rect"></div></div>
+        </div>
+    </div>
+
+    <script defer src="/static/js/skyrfi.js"></script>
+</body>
+</html>
